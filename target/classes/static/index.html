@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>DRONZER Cyber URL</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+
+    <!-- QR library (client-side) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js" defer></script>
+
+    <style>
+        /* ============================
+           THEME VARIABLES
+        ============================= */
+        :root{
+            --bg: #07070d;
+            --panel: #0f0f1a;
+            --text: #e8e8ff;
+            --accent: #6b5bff;
+            --accent2: #00eaff;
+            --tab-bg: #11111f;
+            --tab-text: var(--text);
+            --input-bg: transparent;
+            --input-text: var(--text);
+            --result-bg: #11111f;
+            --muted: #9aa0b4;
+            --border-neon: 0 0 6px var(--accent), 0 0 12px var(--accent2);
+        }
+
+        /* Light / Orange mode */
+        body.light{
+            --bg: #ffffff;
+            --panel: #fff4e6;
+            --text: #2a2a2a;
+            --accent: #ff8c1a;
+            --accent2: #ffb366;
+            --tab-bg: #ffe8d1;
+            --tab-text: #2a2a2a;
+            --input-bg: #ffffff;
+            --input-text: #2a2a2a;
+            --result-bg: #fff7ed;
+            --muted: #6b6b6b;
+            --border-neon: 0 0 8px var(--accent2), 0 0 14px var(--accent);
+        }
+
+        /* ============================
+           BASE / LAYOUT
+        ============================= */
+        html,body{height:100%}
+        body{
+            margin:0;
+            font-family: Inter, "JetBrains Mono", ui-monospace, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+            background:var(--bg);
+            color:var(--text);
+            transition:background .28s,color .28s,box-shadow .28s;
+            -webkit-font-smoothing:antialiased;
+            -moz-osx-font-smoothing:grayscale;
+        }
+
+        .page {
+            width:92%;
+            max-width:1000px;
+            margin:48px auto;
+        }
+
+        .panel {
+            background:var(--panel);
+            border-radius:14px;
+            padding:22px;
+            border:3px solid var(--accent);
+            box-shadow: 0 0 18px var(--accent2);
+            position:relative;
+            overflow:hidden;
+        }
+
+        /* pixel corner accents */
+        .pixel{ position:absolute; width:18px; height:18px; background:var(--accent); }
+        .pixel.tl{ top:-3px; left:-3px }
+        .pixel.tr{ top:-3px; right:-3px }
+        .pixel.bl{ bottom:-3px; left:-3px }
+        .pixel.br{ bottom:-3px; right:-3px }
+
+        /* ============================
+           HEADER / FOOTER
+        ============================= */
+        .top-row{
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:16px;
+            margin-bottom:16px;
+        }
+
+        .brand {
+            font-weight:800;
+            letter-spacing:1px;
+            font-size:20px;
+        }
+
+        .controls { display:flex; gap:10px; align-items:center; }
+
+        .footer {
+            margin-top:20px;
+            font-size:13px;
+            color:var(--muted);
+            opacity:.9;
+            text-align:center;
+        }
+
+        /* theme toggle */
+        .theme-toggle{
+            width:48px; height:48px;
+            border-radius:10px;
+            background:var(--panel);
+            border:2px solid var(--accent);
+            display:flex;align-items:center;justify-content:center;
+            cursor:pointer; box-shadow:var(--border-neon);
+            font-size:18px;
+        }
+
+        /* ============================
+           TABS
+        ============================= */
+        .tabs{ display:flex; gap:8px; margin-bottom:18px; }
+        .tab{
+            flex:1;
+            padding:12px 14px;
+            background:var(--tab-bg);
+            color:var(--tab-text);
+            border-radius:8px;
+            border:2px solid var(--accent);
+            cursor:pointer;
+            text-align:center;
+            font-weight:700;
+            user-select:none;
+        }
+        .tab.active{
+            background:var(--accent);
+            color:#000;
+            box-shadow:var(--border-neon);
+        }
+
+        /* ============================
+           FORM
+        ============================= */
+        .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; justify-content:center; }
+        input[type="text"], input[type="url"]{
+            padding:12px 14px;
+            border-radius:8px;
+            border:2px solid var(--accent);
+            background:var(--input-bg);
+            color:var(--input-text);
+            width:68%;
+            font-size:15px;
+        }
+
+        .small {
+            width:28%;
+            padding:12px 10px;
+        }
+
+        .btn {
+            padding:12px 16px;
+            border-radius:8px;
+            border:2px solid var(--accent2);
+            background:var(--accent);
+            font-weight:800;
+            cursor:pointer;
+            color:#000;
+        }
+
+        .btn.ghost{ background:transparent; color:var(--text); border:2px dashed var(--accent2); }
+
+        .hint {
+            font-size:13px; color:var(--muted); display:block; margin-top:6px; text-align:center;
+        }
+
+        /* inline error */
+        .inline-err { color:#ff5b5b; font-weight:700; margin-top:6px; font-size:13px; text-align:center; display:none; }
+
+        /* ============================
+           ANIMATION / AVATAR
+        ============================= */
+        .anim {
+            text-align:center;
+            margin-top:16px;
+            display:none;
+            animation: pop .35s cubic-bezier(.2,.9,.2,1) both;
+        }
+        @keyframes pop { from{ transform:scale(.6); opacity:0 } to{ transform:scale(1); opacity:1 } }
+
+        .pixel-avatar {
+            width:160px; height:160px; display:inline-block;
+            image-rendering:pixelated;
+            border-radius:8px;
+            box-shadow:0 0 10px rgba(0,0,0,.3);
+        }
+
+        /* result */
+        #result {
+            display:none;
+            margin-top:18px;
+            padding:14px;
+            border-radius:8px;
+            background:var(--result-bg);
+            color:var(--text);
+            border-left:4px solid var(--accent2);
+            font-size:15px;
+        }
+
+        .result-row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:space-between; }
+        .meta { color:var(--muted); font-size:13px; margin-top:8px; }
+
+        .copy-btn, .qr-btn, .open-btn {
+            padding:8px 10px; border-radius:6px; border:none; cursor:pointer; font-weight:700;
+            background:var(--accent2); color:#000;
+        }
+
+        /* history */
+        .history {
+            margin-top:18px;
+            display:flex;
+            flex-direction:column;
+            gap:8px;
+            max-height:220px;
+            overflow:auto;
+        }
+        .hist-item{
+            padding:10px; border-radius:8px; background:rgba(0,0,0,.06);
+            display:flex; gap:8px; align-items:center; justify-content:space-between;
+        }
+        .hist-item a{ color:var(--accent2); font-weight:700; text-decoration:none; }
+
+        /* QR canvas hidden */
+        #qrCanvas{ display:none; }
+
+        /* responsive */
+        @media(max-width:560px){
+            input[type="text"], input[type="url"]{ width:100% }
+            .small{ width:100% }
+            .tabs{ flex-direction:column; }
+            .page{ margin:18px auto; }
+        }
+    </style>
+</head>
+<body>
+<div class="page">
+    <div class="panel" role="main" aria-labelledby="title">
+        <div class="pixel tl"></div>
+        <div class="pixel tr"></div>
+        <div class="pixel bl"></div>
+        <div class="pixel br"></div>
+
+        <div class="top-row">
+            <div class="brand">DRONZER — Cyber URL</div>
+
+            <div class="controls">
+                <!-- theme toggle -->
+                <div class="theme-toggle" id="themeToggle" title="Toggle theme" role="button" tabindex="0" aria-pressed="false">☾</div>
+            </div>
+        </div>
+
+        <div class="tabs" role="tablist" aria-label="Shortener tabs">
+            <div id="tabStandard" class="tab active" role="tab" aria-selected="true" onclick="switchTab('standard')">Standard URL</div>
+            <div id="tabCustom" class="tab" role="tab" aria-selected="false" onclick="switchTab('custom')">Custom URL</div>
+        </div>
+
+        <!-- STANDARD -->
+        <div id="section-standard" class="section active" role="tabpanel">
+            <div class="row">
+                <input id="longUrl" type="url" placeholder="https://example.com/very/long/link" aria-label="Long URL">
+                <button id="btnGenerate" class="btn" onclick="createStandard()">Generate</button>
+            </div>
+            <div class="hint">Press Enter to generate. Short links are generated with a secure 6-char code.</div>
+            <div id="errStandard" class="inline-err"></div>
+        </div>
+
+        <!-- CUSTOM -->
+        <div id="section-custom" class="section" role="tabpanel" aria-hidden="true" style="display:none;">
+            <div class="row" style="flex-direction:column;">
+                <div style="width:100%; display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+                    <input id="customLongUrl" type="url" placeholder="https://example.com" aria-label="Long URL (custom)">
+                    <input id="customAlias" type="text" placeholder="custom-alias (a-z0-9_-)" class="small" aria-label="Custom alias">
+                    <button id="btnCreateCustom" class="btn" onclick="createCustom()">Create</button>
+                </div>
+                <div style="display:flex; gap:10px; justify-content:center; align-items:center; margin-top:8px;">
+                    <div id="aliasStatus" class="hint" style="min-width:160px"></div>
+                    <button class="btn ghost" onclick="suggestAlias()">Suggest</button>
+                </div>
+            </div>
+            <div id="errCustom" class="inline-err"></div>
+        </div>
+
+        <!-- animation avatar -->
+        <div id="animBox" class="anim" aria-hidden="true">
+            <!-- pixel thumbs-up (embedded offline PNG) -->
+            <img
+                    src="/img/thumbs.png"
+                    class="pixel-avatar"
+                    style="width:180px; image-rendering:pixelated; filter:drop-shadow(0 0 10px var(--accent2)); border-radius:4px;"
+                    alt="Thumbs Up Pixel">
+
+
+            <div style="font-weight:800; color:var(--accent2); margin-top:8px; font-size:18px;">URL Ready</div>
+        </div>
+
+        <!-- RESULT -->
+        <div id="result" aria-live="polite">
+            <!-- filled dynamically -->
+        </div>
+
+        <!-- QR canvas for downloading -->
+        <canvas id="qrCanvas"></canvas>
+
+        <!-- history -->
+        <div class="history" id="historyList" aria-label="History"></div>
+
+        <div class="footer">
+            © 2025 DRONZER Labs • v1.0 • Built by Shivanjan
+        </div>
+    </div>
+</div>
+
+<script>
+    /* ============================================================
+       Helper + State
+       ============================================================ */
+    const $ = id => document.getElementById(id);
+    const NOTIF = (msg, type='error')=>{
+        // small temporary notification near top-left of panel (re-using aliasStatus area)
+        // We'll reuse browser alert for critical fallback
+        console.log('notif', type, msg);
+        const s = $('aliasStatus');
+        s.innerText = msg;
+        s.style.color = (type==='error') ? '#ff5b5b' : (type==='success' ? '#00c2a8' : 'var(--muted)');
+        // clear after 2.6s
+        setTimeout(()=> { if (s && s.innerText === msg) s.innerText = ''; }, 2600);
+    };
+
+    const saveTheme = (isLight)=>{
+        try{ localStorage.setItem('dronzer_theme', isLight ? 'light' : 'dark'); }catch(e){}
+    };
+    const loadTheme = ()=>{
+        try{
+            return localStorage.getItem('dronzer_theme') === 'light';
+        }catch(e){ return false }
+    };
+
+    const saveHistory = (entry)=>{
+        try{
+            const key = 'dronzer_history_v1';
+            let arr = JSON.parse(localStorage.getItem(key) || '[]');
+            // prepend and unique by shortCode
+            arr = arr.filter(x=>x.shortCode !== entry.shortCode);
+            arr.unshift(entry);
+            if(arr.length>10) arr = arr.slice(0,10);
+            localStorage.setItem(key, JSON.stringify(arr));
+            renderHistory();
+        }catch(e){ console.error(e); }
+    };
+    const getHistory = ()=>{
+        try{ return JSON.parse(localStorage.getItem('dronzer_history_v1')||'[]') }catch(e){ return [] }
+    };
+    const renderHistory = ()=>{
+        const list = $('historyList'); list.innerHTML = '';
+        const arr = getHistory();
+        if(arr.length===0){
+            list.innerHTML = '<div class="hint" style="text-align:center">No recent URLs yet.</div>';
+            return;
+        }
+        for(const it of arr){
+            const div = document.createElement('div'); div.className='hist-item';
+            const left = document.createElement('div');
+            left.innerHTML = `<div style="font-weight:800"><a href="${it.url}" target="_blank">${it.short}</a></div>
+                              <div class="meta">${it.original}</div>`;
+            const right = document.createElement('div');
+            right.style.display='flex'; right.style.gap='8px'; right.style.alignItems='center';
+            const cp = document.createElement('button'); cp.className='copy-btn'; cp.innerText='Copy'; cp.onclick=()=>{ navigator.clipboard.writeText(it.short); NOTIF('Copied', 'success'); };
+            const qr = document.createElement('button'); qr.className='qr-btn'; qr.innerText='QR'; qr.onclick=()=> generateAndDownloadQR(it.short);
+            const open = document.createElement('button'); open.className='open-btn'; open.innerText='Open'; open.onclick=()=> window.open(it.short,'_blank');
+            right.appendChild(open); right.appendChild(cp); right.appendChild(qr);
+            div.appendChild(left); div.appendChild(right);
+            list.appendChild(div);
+        }
+    };
+
+    /* ============================================================
+       Theme (persist)
+       ============================================================ */
+    (function initTheme(){
+        const isLight = loadTheme();
+        if(isLight) document.body.classList.add('light');
+        $('themeToggle').innerText = document.body.classList.contains('light') ? '☀' : '☾';
+    })();
+    $('themeToggle').addEventListener('click', ()=>{
+        document.body.classList.toggle('light');
+        const isLight = document.body.classList.contains('light');
+        $('themeToggle').innerText = isLight ? '☀' : '☾';
+        saveTheme(isLight);
+    });
+
+    /* ============================================================
+       Tabs
+       ============================================================ */
+    function switchTab(name){
+        const tabs = { standard: 'tabStandard', custom: 'tabCustom' };
+        Object.keys(tabs).forEach(k=>{
+            const tab = $(tabs[k]); const sec = $('section-'+k);
+            if(k===name){ tab.classList.add('active'); if(sec){ sec.style.display='block'; sec.classList.add('active'); sec.setAttribute('aria-hidden','false'); } }
+            else { tab.classList.remove('active'); if(sec){ sec.style.display='none'; sec.classList.remove('active'); sec.setAttribute('aria-hidden','true'); } }
+        });
+    }
+
+    /* ============================================================
+       Keyboard shortcuts
+       - Enter for generate on focused input
+       - Ctrl/C copy when result focused (handled via copy button)
+       ============================================================ */
+    document.addEventListener('keydown', (e)=>{
+        if(e.key === 'Enter'){
+            if(document.activeElement === $('longUrl')) createStandard();
+            else if(document.activeElement === $('customLongUrl') || document.activeElement === $('customAlias')) createCustom();
+        }
+    });
+
+    /* ============================================================
+       Alias availability check (non-destructive)
+       Strategy: do a GET to `/${alias}` with redirect:'manual'. If server returns 3xx (redirect) => exists (TAKEN).
+                 If 404 => available. Other codes handled gracefully.
+       Debounce user typing.
+       ============================================================ */
+    let aliasTimer = 0;
+    $('customAlias').addEventListener('input', ()=>{
+        clearTimeout(aliasTimer);
+        const a = $('customAlias').value.trim();
+        const status = $('aliasStatus');
+        if(!a){ status.innerText=''; return; }
+        if(!/^[A-Za-z0-9_-]+$/.test(a)){ status.innerText='Invalid chars'; status.style.color='#ff5b5b'; return; }
+        aliasTimer = setTimeout(()=> checkAlias(a), 500);
+    });
+
+    async function checkAlias(alias){
+        const status = $('aliasStatus'); status.style.color='var(--muted)';
+        try{
+            // attempt non-following fetch to see if path exists
+            const resp = await fetch(`/${encodeURIComponent(alias)}`, { method:'GET', redirect:'manual' });
+            // 301/302 typically for redirect -> taken
+            if(resp.status >= 300 && resp.status < 400) {
+                status.innerText = 'Alias taken';
+                status.style.color = '#ff5b5b';
+            } else if(resp.status === 404) {
+                status.innerText = 'Available';
+                status.style.color = '#00c2a8';
+            } else {
+                // other: 200? maybe page served, treat as taken. 0 / opaque? treat unknown
+                status.innerText = (resp.status === 200) ? 'Taken' : `Status: ${resp.status}`;
+                status.style.color = (resp.status === 404) ? '#00c2a8' : '#ffd000';
+            }
+        }catch(err){
+            // network error: show neutral text
+            status.innerText = 'Check failed';
+            status.style.color = '#ffd000';
+        }
+    }
+
+    /* ============================================================
+       Server calls
+       - POST /api/create?longUrl=...
+       - POST /api/custom?longUrl=...&custom=...
+       Server responses expected to be JSON like:
+         { shortCode: "abc123", originalUrl: "https://...", clicks: 0, createdAt: "..."}
+       script is defensive if fields missing.
+       ============================================================ */
+
+    function showError(elId, message){
+        const el = $(elId); if(!el) return;
+        el.innerText = message; el.style.display='block';
+        setTimeout(()=> el.style.display='none', 2600);
+    }
+
+    // loader & show animation
+    function showAnim(){
+        $('animBox').style.display='block';
+    }
+    function hideAnim(){
+        $('animBox').style.display='none';
+    }
+
+    // construct short url
+    function buildShortUrl(code){
+        // if server returns full shortCode as url (maybe user used /full) handle both
+        if(code.startsWith('http')) return code;
+        return `${window.location.origin}/${code}`;
+    }
+
+    function renderResult(data){
+        const shortCode = data.shortCode || data.short || '';
+        const original = data.originalUrl || data.original || data.url || '';
+        const clicks = (data.clicks !== undefined) ? data.clicks : (data.clickCount !== undefined ? data.clickCount : null);
+        const createdAt = data.createdAt || data.created || '';
+
+        const shortUrl = buildShortUrl(shortCode);
+        const result = $('result');
+        result.innerHTML = `
+            <div class="result-row">
+                <div style="min-width:52%">
+                    <div style="font-weight:900; font-size:16px; margin-bottom:6px">Short URL</div>
+                    <div><a id="shortLink" href="${shortUrl}" target="_blank" style="color:var(--accent2); font-weight:800; font-size:15px">${shortUrl}</a>
+                        <button class="copy-btn" onclick="copyAndNotify('${shortUrl}')">Copy</button>
+                        <button class="qr-btn" onclick="generateAndDownloadQR('${shortUrl}')">QR</button>
+                    </div>
+                    <div class="meta">Original: <span style="color:var(--muted)">${original}</span>
+                        <button class="copy-btn" style="margin-left:8px" onclick="copyAndNotify('${original}')">Copy Original</button>
+                    </div>
+                </div>
+                <div style="min-width:36%; text-align:right">
+                    <div style="font-weight:900">Stats</div>
+                    <div class="meta">Clicks: ${clicks===null? '—' : clicks}</div>
+                    <div class="meta">Created: ${createdAt ? (new Date(createdAt)).toLocaleString() : '—'}</div>
+                </div>
+            </div>
+        `;
+        result.style.display='block';
+        // avatar + animation
+        showAnim();
+
+        // store in local history store
+        saveHistory({
+            short: shortUrl,
+            shortCode: shortCode,
+            original: original,
+            url: shortUrl,
+            createdAt: createdAt,
+            clicks: clicks
+        });
+
+        // make short link auto-select on click
+        setTimeout(()=> {
+            const sl = $('shortLink');
+            if(sl) sl.addEventListener('click', (e)=> {
+                // allow navigation, but also select text to help copying (double action)
+                try{
+                    const range = document.createRange();
+                    range.selectNodeContents(sl);
+                    const sel = window.getSelection();
+                    sel.removeAllRanges(); sel.addRange(range);
+                }catch(e){}
+            });
+        }, 100);
+    }
+
+    function copyAndNotify(text){
+        navigator.clipboard.writeText(text).then(()=> NOTIF('Copied', 'success')).catch(()=> alert('Copy failed'));
+    }
+
+    /* ============================================================
+       QR generation + download (uses qrious)
+       ============================================================ */
+    function generateAndDownloadQR(text){
+        try{
+            // create QR using qrious (library loaded)
+            const qr = new QRious({ value: text, size: 400 });
+            // create temporary link and download
+            const dataUrl = qr.toDataURL();
+            const a = document.createElement('a');
+            a.href = dataUrl;
+            a.download = 'dronzer-qr.png';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        }catch(e){
+            alert('QR generation failed: ' + e);
+        }
+    }
+
+    /* ============================================================
+       Core create / custom flows
+       ============================================================ */
+
+    async function createStandard(){
+        const url = $('longUrl').value.trim();
+        if(!url) { showError('errStandard','URL cannot be empty'); return; }
+        // simple URL pattern check
+        try{ new URL(url); }catch(e){ showError('errStandard','Enter a valid URL (include https://)'); return; }
+
+        hideAnim();
+        $('result').style.display='none';
+        showAnim();
+        try{
+            const resp = await fetch(`/api/create?longUrl=${encodeURIComponent(url)}`, { method:'POST' });
+            if(!resp.ok){
+                const txt = await resp.text();
+                showError('errStandard', txt || 'Server error');
+                hideAnim();
+                return;
+            }
+            const data = await resp.json();
+            renderResult(data);
+        }catch(e){
+            showError('errStandard','Request failed: ' + e);
+            hideAnim();
+        }
+    }
+
+    /*
+     Custom flow:
+     - validate
+     - check alias: if taken, prompt user whether they want to "replace" or "use anyway" (as you instructed).
+       - If replace: call server delete + create? But we don't have delete by alias publicly maybe. Instead the server throws if alias taken.
+       - We'll implement option: if taken -> show prompt: "Alias taken. Replace?" If user chooses Replace, we attempt to create anyway (server will reject). If server rejects, show message.
+       - The user earlier asked: "if alias is already taken then generate the link using the taken alias only" -> That is contradictory; we interpret as: if taken and user chooses to "use anyway", we proceed to POST and let server handle. If server forbids, it will respond with error.
+    */
+    async function createCustom(){
+        const url = $('customLongUrl').value.trim();
+        const alias = $('customAlias').value.trim();
+        if(!url) { showError('errCustom','URL cannot be empty'); return; }
+        try{ new URL(url); }catch(e){ showError('errCustom','Enter a valid URL (include https://)'); return; }
+        if(!alias) { showError('errCustom','Alias required'); return; }
+        if(!/^[A-Za-z0-9_-]+$/.test(alias)){ showError('errCustom','Alias must be A–Z, 0–9, _ or -'); return; }
+
+        // check alias availability first
+        try{
+            const resp = await fetch(`/${encodeURIComponent(alias)}`, { method:'GET', redirect:'manual' });
+            const taken = (resp.status >= 300 && resp.status < 400) || resp.status === 200;
+            if(taken){
+                // alias taken: provide UI choice
+                const use = confirm(`Alias "${alias}" appears to be taken.\n\nPress OK to attempt to use it anyway (server will decide), or Cancel to choose a different alias.`);
+                if(!use) return;
+                // otherwise proceed to send request (user chose to "use anyway")
+            }
+        }catch(e){
+            // network error on check -> proceed but warn
+            const proceed = confirm('Could not check alias availability due to network. Proceed to attempt create?');
+            if(!proceed) return;
+        }
+
+        // send create request
+        hideAnim(); $('result').style.display='none'; showAnim();
+        try{
+            const resp = await fetch(`/api/custom?longUrl=${encodeURIComponent(url)}&custom=${encodeURIComponent(alias)}`, { method:'POST' });
+            if(!resp.ok){
+                const txt = await resp.text();
+                // if server returns message "Custom alias already taken", show user a replace prompt
+                if(txt && txt.toLowerCase().includes('already')) {
+                    const replace = confirm(`Server says: "${txt}".\n\nDo you want to replace the existing alias (if you own it)?\n\nNote: replacement requires server-side support. If you don't have permission, operation may fail.`);
+                    if(replace){
+                        // attempt create anyway (user insisted). Let server reject or accept.
+                        const r2 = await fetch(`/api/custom?longUrl=${encodeURIComponent(url)}&custom=${encodeURIComponent(alias)}`, { method:'POST' });
+                        if(!r2.ok) {
+                            const t2 = await r2.text();
+                            showError('errCustom', t2 || 'Replace failed');
+                            hideAnim();
+                            return;
+                        } else {
+                            const data = await r2.json();
+                            renderResult(data);
+                            hideAnim();
+                            return;
+                        }
+                    } else {
+                        showError('errCustom', txt || 'Alias taken');
+                        hideAnim();
+                        return;
+                    }
+                }
+                showError('errCustom', txt || 'Server error');
+                hideAnim();
+                return;
+            }
+            const data = await resp.json();
+            renderResult(data);
+        }catch(e){
+            showError('errCustom','Request failed: ' + e);
+            hideAnim();
+        }
+    }
+
+    /* ============================================================
+       Alias suggestion helper (simple)
+       ============================================================ */
+    function suggestAlias(){
+        const base = Date.now().toString(36).slice(-4);
+        $('customAlias').value = 'dronz-' + base;
+        checkAlias($('customAlias').value);
+    }
+
+    /* ============================================================
+       Init
+       ============================================================ */
+    (function onLoad(){
+        // wire result shortlink click to select
+        renderHistory();
+
+        // preload: hide anim
+        hideAnim();
+
+        // if history exists, ensure panel shows history header
+        renderHistory();
+    })();
+
+</script>
+</body>
+</html>
