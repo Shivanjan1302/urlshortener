@@ -1,8 +1,6 @@
 services:
   - type: web
-    name: urlshortener
-    runtime: java
-    region: singapore
-    branch: main
-    buildCommand: mvn clean install -DskipTests
-    startCommand: java -jar target/*.jar
+    name: dronzer-url-shortener
+    env: docker
+    plan: free
+    autoDeploy: true
